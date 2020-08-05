@@ -3,7 +3,10 @@
 #include <math.h>
 #include "mpi.h"
 #define Host_ID       0   
-
+struct _ParamList{
+  int* Param;
+  double* RandNum;
+};
 int main(int argc, char *argv[]){
 
   int myid, numprocs;
@@ -12,7 +15,7 @@ int main(int argc, char *argv[]){
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
   MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
 
-  int N = 242;
+  int N = 243;
 
   int iproc, Nproc, iprocINI, iprocEND;
   int Sumproc, Sum;
@@ -44,6 +47,7 @@ int main(int argc, char *argv[]){
       procList[procListindex]       = RandomNum;
       procParamList[procListindex]  = iproc;
       procListindex++;
+      //printf("%d\n",iproc);
     }
   }
 
@@ -66,11 +70,10 @@ int main(int argc, char *argv[]){
   MPI_Reduce( &procListindex, &ListCount, 1, MPI_INT, MPI_SUM,
           Host_ID, MPI_COMM_WORLD);
   
-  double *List;
-  List = (double*)malloc( sizeof(double) * ListCount );
+  struct _ParamList Parameter;
 
-  int *ParamList;
-  ParamList = (int*)malloc( sizeof(int) * ListCount );
+  Parameter.Param   = (int*)malloc( sizeof(int) * ListCount );
+  Parameter.RandNum = (double*)malloc( sizeof(double) * ListCount );
 
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -87,17 +90,17 @@ int main(int argc, char *argv[]){
 
   MPI_Gatherv( 
         procListGather, procListindex, MPI_DOUBLE,
-        List,     procListNum, displs,
+        Parameter.RandNum,     procListNum, displs,
         MPI_DOUBLE, Host_ID, MPI_COMM_WORLD);
   
   MPI_Gatherv( 
         procParamListGather, procListindex, MPI_INT,
-        ParamList,     procListNum, displs,
+        Parameter.Param,     procListNum, displs,
         MPI_INT, Host_ID, MPI_COMM_WORLD);
   
   if ( myid == Host_ID ){
     for ( int i = 0; i < ListCount; i++ )
-      printf("List[%d] = %d %f\n", i, ParamList[i], List[i]);
+      printf("Parameter = %d %f\n", Parameter.Param[i], Parameter.RandNum[i]);
   }
 
   
@@ -105,8 +108,8 @@ int main(int argc, char *argv[]){
   free(procListNum);
   free(procParamList);
   free(displs);
-  free(List);
-  free(ParamList);
+  free(Parameter.Param);
+  free(Parameter.RandNum);
 
   MPI_Finalize();
   return 0;
